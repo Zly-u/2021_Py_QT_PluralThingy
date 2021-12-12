@@ -3,23 +3,20 @@ import sys
 from urllib import request
 
 # PyQt5 stuff
-import PyQt5.QtWidgets
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QSize
 from PyQt5.QtGui import QPixmap
 from pynput import keyboard
 
+#Members Styling
 member_StyleSheet = '''
-QFrame {
+QFrame {{
     border: 2px solid gray;
     border-bottom-right-radius: 15px;
     border-top-left-radius: 15px;
-    background: #DED0FF;
-    /*border-radius: 10px;*/
-    /*padding-right: -8px;*/
-}
+    background: #{color};
+}}
 '''
-
 memberavy_StyleSheet = '''
 QLabel {
     border-bottom-right-radius: 15px;
@@ -34,7 +31,7 @@ QRadioButton {
 '''
 
 
-#Group Colours
+#Group Styling
 #AED0DD
 ScrollArea_StyleSheet_Heaven = '''
 QScrollArea QWidget{   
@@ -75,7 +72,21 @@ QAbstractScrollArea {
 '''
 
 PK_ENDPOINT = "https://api.pluralkit.me/v2/"
-GROUP_ID = [("civgw", ScrollArea_StyleSheet_Heaven), ("iswtg", ScrollArea_StyleSheet_Core), ("smcnu", ScrollArea_StyleSheet_Depths)]
+GROUP_ID = [
+    ("civgw", ScrollArea_StyleSheet_Heaven),
+    ("iswtg", ScrollArea_StyleSheet_Core),
+    ("smcnu", ScrollArea_StyleSheet_Depths)
+]
+
+def lerp(a, b, x): return int(a*x+b*(1-x))
+def blendWithWhite(color, amt = 0.5):
+    icol = int(color, 16)
+    red = (icol & 0xFF0000) >> 16
+    grn = (icol & 0x00FF00) >> 8
+    blu = (icol & 0x0000FF)
+    return '{0:06x}'.format(lerp(red, 0xff, amt) << 16 | lerp(grn, 0xff, amt) << 8 | lerp(blu, 0xff, amt))
+    # return '{0:02x}{1:02x}{2:02x}'.format(lerp(red, 0xff, amt), lerp(grn, 0xff, amt), lerp(blu, 0xff, amt))
+
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
@@ -120,13 +131,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     memberavyfile.write(member_avy.read())
 
                 frame_memberbox = QtWidgets.QFrame(self.scrollArea_WidgetContents)
-                frame_memberbox.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-                frame_memberbox.setMinimumSize(102, 120)
-                frame_memberbox.setMaximumSize(int(102*2.1), int(120*2.1))
+                frame_memberbox.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+                frame_memberbox.setFixedSize(102, 120)
                 frame_memberbox.setLineWidth(2)
                 frame_memberbox.setFrameShape(QtWidgets.QFrame.Panel)
                 frame_memberbox.setFrameShadow(QtWidgets.QFrame.Sunken)
-                frame_memberbox.setStyleSheet(member_StyleSheet)
+                frame_memberbox.setStyleSheet(member_StyleSheet.format(color=blendWithWhite(color=member["color"], amt=0.4)))
 
                 frame_memberbox_layout = QtWidgets.QVBoxLayout(frame_memberbox)
 
