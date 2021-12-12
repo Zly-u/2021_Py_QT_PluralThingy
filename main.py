@@ -1,8 +1,9 @@
 import json
 import sys
+import pyperclip
 from urllib import request
 from pynput import keyboard
-import pyperclip
+from os import mkdir
 
 # PyQt5 stuff
 from PyQt5 import QtWidgets
@@ -123,6 +124,10 @@ class MainWindow(QtWidgets.QMainWindow):
             members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{groupid}/members"))
             for member in members:
                 print(member)
+                try:
+                    mkdir("avatars")
+                except FileExistsError:
+                    pass
                 member_avy_ext = member["avatar_url"].split(".")[-1]
                 member_avy_path = f"avatars/{member['name']}.{member_avy_ext}"
                 member_avy_req = request.Request(member["avatar_url"], headers={"User-Agent": "Python3.10"})
