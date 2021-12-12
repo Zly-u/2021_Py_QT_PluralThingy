@@ -1,0 +1,23 @@
+# Virtual environments
+venv/
+virtualenv/
+env/
+
+# Outputs
+out/
+output/
+temp/
+test/
+
+# Build process
+dist/
+build/
+*.spec
+__pycache__/
+*.pyo
+*.pyc
+*.pyd
+
+#misc
+avatars/
+.idea/
