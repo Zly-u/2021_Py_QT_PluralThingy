@@ -1,12 +1,13 @@
 import json
 import sys
 from urllib import request
+from pynput import keyboard
+import pyperclip
 
 # PyQt5 stuff
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QSize
 from PyQt5.QtGui import QPixmap
-from pynput import keyboard
 
 #Members Styling
 member_StyleSheet = '''
@@ -85,11 +86,10 @@ def blendWithWhite(color, amt = 0.5):
     grn = (icol & 0x00FF00) >> 8
     blu = (icol & 0x0000FF)
     return '{0:06x}'.format(lerp(red, 0xff, amt) << 16 | lerp(grn, 0xff, amt) << 8 | lerp(blu, 0xff, amt))
-    # return '{0:02x}{1:02x}{2:02x}'.format(lerp(red, 0xff, amt), lerp(grn, 0xff, amt), lerp(blu, 0xff, amt))
 
 
 class MainWindow(QtWidgets.QMainWindow):
-    def __init__(self, parent=None):
+    def __init__(self):
         self.active_member = None
         self.members = {}
 
@@ -157,6 +157,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         if self.active_member:
                             self.active_member["button"].setChecked(False)
                         self.active_member = meme
+                        self.active_member["button"].setChecked(True)
                     memberbutton.clicked.connect(disableButtons)
 
                     memberimage = QtWidgets.QLabel(frame_memberbox)
@@ -196,7 +197,16 @@ if __name__ == "__main__":
     def sendWithPrefix():
         with kb_controller.pressed(keyboard.Key.ctrl):
             kb_controller.tap(keyboard.Key.home)
-        kb_controller.type(" "+window.active_member["prefix"])
+
+        prefix = " "+window.active_member["prefix"]
+        pyperclip.copy(prefix)
+        with kb_controller.pressed(keyboard.Key.ctrl):
+            kb_controller.tap('v')
+
+
+
+
+
         kb_controller.tap(keyboard.Key.enter)
 
     def inputfilter(message, data):
