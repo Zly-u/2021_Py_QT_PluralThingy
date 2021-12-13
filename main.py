@@ -1,9 +1,10 @@
+import ctypes
+import os
 import json
 import sys
 import pyperclip
 from urllib import request
 from pynput import keyboard
-from os import mkdir
 
 # PyQt5 stuff
 from PyQt5 import QtWidgets
@@ -62,7 +63,6 @@ QAbstractScrollArea {
 #0F1854
 ScrollArea_StyleSheet_Depths = '''
 QScrollArea QWidget{   
-    /*background-color: #0F1854;*/
     background-color: qlineargradient( x1:0.5 y1:0, x2:0.5 y2:1, stop:0 #591B79, stop:0.1 #0F1854);
 }
 QWidget#scrollAreaWidgetContents {
@@ -72,6 +72,16 @@ QAbstractScrollArea {
     background-color: #0F1854;
 }
 '''
+
+DEFAULT_JSON_DATA = {
+    "system_id": "",
+    "specified_group_ids": {
+        "group_id": {
+            "style_qss": ""
+        },
+    }
+}
+
 
 PK_ENDPOINT = "https://api.pluralkit.me/v2/"
 GROUP_ID = [
@@ -96,7 +106,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         super(MainWindow, self).__init__()
 
-        self.setWindowTitle("Test")
+
         self.resize(620, 487)
         self.setMinimumSize(460, 487)
 
@@ -105,7 +115,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.main_layout = QtWidgets.QVBoxLayout(self.centralwidget)
 
-        for groupid, scrollArea_style in GROUP_ID:
+        self.system_data = getGroupsAndMembersData(validateJSON())
+
+        self.setWindowTitle(self.system_data["name"])
+        for _, group in list(self.system_data["groups"].items())[::-1]:
+            scrollArea_style = group["style_qss"]
             self.scrollArea_WidgetContents = QtWidgets.QWidget()
             self.scrollArea_WidgetContents.setStyleSheet(scrollArea_style)
 
@@ -121,19 +135,21 @@ class MainWindow(QtWidgets.QMainWindow):
             scrollArea_groupbox_layout  = QtWidgets.QHBoxLayout(self.scrollArea_WidgetContents)
             scrollArea_groupbox_layout.setAlignment(Qt.AlignLeft)
 
-            members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{groupid}/members"))
-            for member in members:
-                print(member)
+            # members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{groupid}/members"))
+            for _, member in group["members"].items():
+                # print(member)
+
                 try:
-                    mkdir("avatars")
+                    os.mkdir("avatars")
                 except FileExistsError:
                     pass
-                member_avy_ext = member["avatar_url"].split(".")[-1]
+
+                member_avy_ext  = member["avatar_url"].split(".")[-1]
                 member_avy_path = f"avatars/{member['name']}.{member_avy_ext}"
-                member_avy_req = request.Request(member["avatar_url"], headers={"User-Agent": "Python3.10"})
-                member_avy = request.urlopen(member_avy_req)
+                member_avy_req  = request.Request(member["avatar_url"], headers={"User-Agent": "Python3.10"})
+                member_avy_img  = request.urlopen(member_avy_req)
                 with open(member_avy_path, "wb") as memberavyfile:
-                    memberavyfile.write(member_avy.read())
+                    memberavyfile.write(member_avy_img.read())
 
                 frame_memberbox = QtWidgets.QFrame(self.scrollArea_WidgetContents)
                 frame_memberbox.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -191,6 +207,72 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_layout.addWidget(button_none)
 
 
+def errorMsg(message, title, _exit=True):
+    ctypes.windll.user32.MessageBoxW(0, message, title, 0)
+    if _exit: sys.exit()
+
+
+def validateJSON(config_name = "config.json"):
+    # Check if config exists
+    if not os.path.exists(config_name):
+        f = open(config_name, 'w+')
+        f.write(json.dumps(DEFAULT_JSON_DATA, indent=4))
+        f.close()
+        errorMsg(f"Setup the '{config_name}' first", "Welcome!")
+
+    # Check the config itself.
+    config_data_raw = open(config_name, 'r+')
+    config_data = json.load(config_data_raw)
+    print(config_data)
+
+    # Check the fields in the config
+    if config_data["system_id"] == "":
+        errorMsg("The System ID is not specifyed", f"Error in {config_name}")
+
+    print("Seems loik everything is fine with the config! ^w^")
+
+    # if "group_id" in config_data["specified_group_ids"]["group_id"].keys():
+    #     errorMsg(f"Clean up 'specified_group_ids' group in '{config_name}' if it's not used", f"Error in {config_name}")
+
+    return config_data
+
+
+def getGroupsAndMembersData(config_data):
+    config_system_id           = config_data["system_id"]
+    config_specified_groups    = config_data["specified_group_ids"]
+
+    systems_data    = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}"))
+    systems_groups  = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups"))
+
+    prepared_systems_data = systems_data
+    prepared_systems_data["groups"] = {}
+    for systems_group in systems_groups:
+        group_id = systems_group["id"]
+        prepared_group = systems_group
+
+        # Preparing and appending data for conveniece idk.
+        prepared_group["members"] = {}
+
+        # If the group specified in the config - retreive the data
+        prepared_group["style_qss"] = ""
+        if group_id in config_specified_groups:
+            prepared_group["style_qss"] = str(config_specified_groups[group_id]["style_qss"])
+
+        # Append members into the group's data
+        groups_members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{group_id}/members"))
+        for member in groups_members:
+            prepared_group["members"][member["id"]] = member
+
+        # Append the prepared group in the main data
+        prepared_systems_data["groups"][group_id] = prepared_group
+
+    # print(prepared_systems_data)
+    f = open("your_system.json", 'w+')
+    f.write(json.dumps(prepared_systems_data, indent=4))
+    f.close()
+
+    return prepared_systems_data
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
@@ -208,24 +290,23 @@ if __name__ == "__main__":
         with kb_controller.pressed(keyboard.Key.ctrl):
             kb_controller.tap('v')
 
-
-
-
-
         kb_controller.tap(keyboard.Key.enter)
+
 
     def inputfilter(message, data):
         global sending
-        print(message, data.vkCode, sending)
+        # print(message, data.vkCode, sending)
         if not sending and data.vkCode == 0x0d and message == 0x100 and window.active_member is not None:
             sending = True
             sendWithPrefix()
             sending = False
-            listener.suppress_event()
+            kb_listener.suppress_event()
         return False
 
-    listener = keyboard.Listener(win32_event_filter = inputfilter)
-    listener.start()
+    kb_listener = keyboard.Listener(win32_event_filter = inputfilter)
+    kb_listener.start()
+
+    # kb_listener = keyboard_hook()
     status = app.exec_()
-    listener.stop()
+    kb_listener.stop()
     sys.exit(status)
