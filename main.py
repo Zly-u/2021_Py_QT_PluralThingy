@@ -11,6 +11,13 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 
+#Group Styling
+group_label_name_styleSheet = '''
+QLabel {{
+    font-size: 12pt;
+    background-color: qlineargradient( x1:0 y1:0, x2:1 y2:0, stop:0 #{color}, stop:1 transparent);
+}}
+'''
 
 #Members Styling
 member_StyleSheet = '''
@@ -27,7 +34,6 @@ QLabel {
     border-top-left-radius: 15px;
 }
 '''
-
 QLabel_StyleSheet = '''
 QRadioButton {
     background-color: transparent;
@@ -64,8 +70,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
 
 
-        self.resize(620, 550)
-        self.setMinimumSize(460, 550)
+        self.resize(620, 635)
+        self.setMinimumSize(460, 635)
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
@@ -101,6 +107,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
             scrollArea_groupbox_layout  = QtWidgets.QHBoxLayout(self.scrollArea_WidgetContents)
             scrollArea_groupbox_layout.setAlignment(Qt.AlignLeft)
+
+            group_label_name = QtWidgets.QLabel(scrollArea_MAIN_groupbox)
+            group_label_name.setText(group["display_name"] if group["display_name"] else group["name"])
+            group_label_color = blendWithWhite(color=group["color"], amt=0.4) if group["color"] else "transparent"
+            group_label_name.setStyleSheet(group_label_name_styleSheet.format(color=group_label_color))
+            scrollArea_MAIN_groupbox_layout.addWidget(group_label_name)
             for _, member in group["members"].items():
                 print(member)
 
@@ -277,3 +289,11 @@ if __name__ == "__main__":
     status = app.exec_()
     kb_listener.stop()
     sys.exit(status)
+
+
+
+
+
+
+
+
