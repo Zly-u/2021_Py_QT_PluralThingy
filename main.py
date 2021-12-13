@@ -8,8 +8,9 @@ from pynput import keyboard
 
 # PyQt5 stuff
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QSize
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
+
 
 #Members Styling
 member_StyleSheet = '''
@@ -34,45 +35,8 @@ QRadioButton {
 '''
 
 
-#Group Styling
-#AED0DD
-ScrollArea_StyleSheet_Heaven = '''
-QScrollArea QWidget{   
-    /*background-color: #AED0DD;*/
-    background-color: qlineargradient( x1:0.5 y1:0, x2:0.5 y2:1, stop:0.9 #AED0DD, stop:1 #591B79);
-}
-QWidget#scrollAreaWidgetContents {
-    background-color: #AED0DD;
-} 
-QAbstractScrollArea {
-    background-color: #AED0DD;
-}
-'''
 
-#591B79
-ScrollArea_StyleSheet_Core = '''
-QScrollArea QWidget{   
-    background-color: #591B79;
-}
-
-QAbstractScrollArea {
-    background-color: #591B79;
-}
-'''
-
-#0F1854
-ScrollArea_StyleSheet_Depths = '''
-QScrollArea QWidget{   
-    background-color: qlineargradient( x1:0.5 y1:0, x2:0.5 y2:1, stop:0 #591B79, stop:0.1 #0F1854);
-}
-QWidget#scrollAreaWidgetContents {
-    background-color: #0F1854;
-} 
-QAbstractScrollArea {
-    background-color: #0F1854;
-}
-'''
-
+PK_ENDPOINT = "https://api.pluralkit.me/v2/"
 DEFAULT_JSON_DATA = {
     "system_id": "",
     "specified_group_ids": {
@@ -82,13 +46,6 @@ DEFAULT_JSON_DATA = {
     }
 }
 
-
-PK_ENDPOINT = "https://api.pluralkit.me/v2/"
-GROUP_ID = [
-    ("civgw", ScrollArea_StyleSheet_Heaven),
-    ("iswtg", ScrollArea_StyleSheet_Core),
-    ("smcnu", ScrollArea_StyleSheet_Depths)
-]
 
 def lerp(a, b, x): return int(a*x+b*(1-x))
 def blendWithWhite(color, amt = 0.5):
@@ -107,49 +64,60 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
 
 
-        self.resize(620, 487)
-        self.setMinimumSize(460, 487)
+        self.resize(620, 550)
+        self.setMinimumSize(460, 550)
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
-
         self.main_layout = QtWidgets.QVBoxLayout(self.centralwidget)
 
         self.system_data = getGroupsAndMembersData(validateJSON())
-
         self.setWindowTitle(self.system_data["name"])
+
+        scrollArea_MAIN_WidgetContents = QtWidgets.QWidget()
+        scrollArea_MAIN_groupbox = QtWidgets.QScrollArea(self.centralwidget)
+        scrollArea_MAIN_groupbox.setWidget(scrollArea_MAIN_WidgetContents)
+        scrollArea_MAIN_groupbox.setWidgetResizable(True)
+        scrollArea_MAIN_groupbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        scrollArea_MAIN_groupbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea_MAIN_groupbox_layout = QtWidgets.QVBoxLayout(scrollArea_MAIN_WidgetContents)
+        scrollArea_MAIN_groupbox_layout.setAlignment(Qt.AlignTop)
+        self.main_layout.addWidget(scrollArea_MAIN_groupbox)
         for _, group in list(self.system_data["groups"].items())[::-1]:
             scrollArea_style = group["style_qss"]
             self.scrollArea_WidgetContents = QtWidgets.QWidget()
-            self.scrollArea_WidgetContents.setStyleSheet(scrollArea_style)
 
-            scrollArea_groupbox = QtWidgets.QScrollArea(self.centralwidget)
-            scrollArea_groupbox.setStyleSheet(scrollArea_style)
+            scrollArea_groupbox = QtWidgets.QScrollArea(scrollArea_MAIN_groupbox)
             scrollArea_groupbox.setWidget(self.scrollArea_WidgetContents)
+            scrollArea_groupbox.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+            scrollArea_groupbox.setFixedHeight(160)
             scrollArea_groupbox.setWidgetResizable(True)
             scrollArea_groupbox.setLineWidth(3)
             scrollArea_groupbox.setFrameShape(QtWidgets.QFrame.Panel)
             scrollArea_groupbox.setFrameShadow(QtWidgets.QFrame.Sunken)
             scrollArea_groupbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            scrollArea_groupbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            scrollArea_groupbox.setStyleSheet(scrollArea_style)
 
             scrollArea_groupbox_layout  = QtWidgets.QHBoxLayout(self.scrollArea_WidgetContents)
             scrollArea_groupbox_layout.setAlignment(Qt.AlignLeft)
-
-            # members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{groupid}/members"))
             for _, member in group["members"].items():
-                # print(member)
+                print(member)
 
                 try:
                     os.mkdir("avatars")
                 except FileExistsError:
                     pass
 
-                member_avy_ext  = member["avatar_url"].split(".")[-1]
-                member_avy_path = f"avatars/{member['name']}.{member_avy_ext}"
-                member_avy_req  = request.Request(member["avatar_url"], headers={"User-Agent": "Python3.10"})
-                member_avy_img  = request.urlopen(member_avy_req)
-                with open(member_avy_path, "wb") as memberavyfile:
-                    memberavyfile.write(member_avy_img.read())
+                member_avy_url  = member["avatar_url"]
+                member_avy_path = ""
+                if member_avy_url:
+                    member_avy_ext  = member_avy_url.split(".")[-1]
+                    member_avy_path = f"avatars/{member['name']}.{member_avy_ext}"
+                    member_avy_req  = request.Request(member_avy_url, headers={"User-Agent": "Python3.10"})
+                    member_avy_img  = request.urlopen(member_avy_req)
+                    with open(member_avy_path, "wb") as memberavyfile:
+                        memberavyfile.write(member_avy_img.read())
 
                 frame_memberbox = QtWidgets.QFrame(self.scrollArea_WidgetContents)
                 frame_memberbox.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -166,7 +134,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     memberdict = {
                         "frame":  frame_memberbox,
                         "button": memberbutton,
-                        "prefix": member["proxy_tags"][0]["prefix"],
+                        "prefix": member["proxy_tags"][0]["prefix"] if member["proxy_tags"] else None,
                         "name": member["name"]
                     }
                     self.members[member["name"]] = memberdict
@@ -183,7 +151,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
                     memberimage = QtWidgets.QLabel(frame_memberbox)
                     memberimage.setScaledContents(True)
-                    memberimage.setPixmap(QPixmap(member_avy_path))
+                    if member_avy_url:
+                        memberimage.setPixmap(QPixmap(member_avy_path))
+                    else:
+                        memberimage.setText("NO IMAGE")
+                        memberimage.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+
                     memberimage.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
                     memberimage.setFixedSize(80, 80)
 
@@ -192,7 +165,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 scrollArea_groupbox_layout.addWidget(frame_memberbox)
 
-            self.main_layout.addWidget(scrollArea_groupbox)
+            scrollArea_MAIN_groupbox_layout.addWidget(scrollArea_groupbox)
 
         button_none = QtWidgets.QPushButton(self.centralwidget)
         button_none.setText("None")
@@ -231,9 +204,6 @@ def validateJSON(config_name = "config.json"):
 
     print("Seems loik everything is fine with the config! ^w^")
 
-    # if "group_id" in config_data["specified_group_ids"]["group_id"].keys():
-    #     errorMsg(f"Clean up 'specified_group_ids' group in '{config_name}' if it's not used", f"Error in {config_name}")
-
     return config_data
 
 
@@ -266,7 +236,6 @@ def getGroupsAndMembersData(config_data):
         # Append the prepared group in the main data
         prepared_systems_data["groups"][group_id] = prepared_group
 
-    # print(prepared_systems_data)
     f = open("your_system.json", 'w+')
     f.write(json.dumps(prepared_systems_data, indent=4))
     f.close()
@@ -275,10 +244,12 @@ def getGroupsAndMembersData(config_data):
 
 
 if __name__ == "__main__":
+    # WINDOW HANDLING
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     window.show()
 
+    # KEYBOARD HANDLING
     kb_controller = keyboard.Controller()
     sending = False
     def sendWithPrefix():
@@ -291,22 +262,18 @@ if __name__ == "__main__":
             kb_controller.tap('v')
 
         kb_controller.tap(keyboard.Key.enter)
-
-
     def inputfilter(message, data):
         global sending
-        # print(message, data.vkCode, sending)
         if not sending and data.vkCode == 0x0d and message == 0x100 and window.active_member is not None:
             sending = True
             sendWithPrefix()
             sending = False
             kb_listener.suppress_event()
         return False
-
     kb_listener = keyboard.Listener(win32_event_filter = inputfilter)
     kb_listener.start()
 
-    # kb_listener = keyboard_hook()
+    # STATUSES HANDLING
     status = app.exec_()
     kb_listener.stop()
     sys.exit(status)
