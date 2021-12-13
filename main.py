@@ -11,13 +11,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 
-#Group Styling
-group_label_name_styleSheet = '''
-QLabel {{
-    font-size: 12pt;
-    background-color: qlineargradient( x1:0 y1:0, x2:1 y2:0, stop:0 #{color}, stop:1 transparent);
-}}
-'''
 
 #Members Styling
 member_StyleSheet = '''
@@ -40,11 +33,21 @@ QRadioButton {
 }
 '''
 
+#Groups Styles
+group_scrollArea_styleSheet = '''
+QScrollBar:horizontal {{
+    height: 13px;
+    background-color: #{group_color}
+}}
+'''
 
 
 PK_ENDPOINT = "https://api.pluralkit.me/v2/"
 DEFAULT_JSON_DATA = {
     "system_id": "",
+    "styles": {
+        "general_groupLables_style": "",
+    },
     "specified_group_ids": {
         "group_id": {
             "style_qss": ""
@@ -77,7 +80,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.centralwidget)
         self.main_layout = QtWidgets.QVBoxLayout(self.centralwidget)
 
-        self.system_data = getGroupsAndMembersData(validateJSON())
+        self.system_data, self.config_data = getGroupsAndMembersData(validateJSON())
         self.setWindowTitle(self.system_data["name"])
 
         scrollArea_MAIN_WidgetContents = QtWidgets.QWidget()
@@ -103,7 +106,8 @@ class MainWindow(QtWidgets.QMainWindow):
             scrollArea_groupbox.setFrameShadow(QtWidgets.QFrame.Sunken)
             scrollArea_groupbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             scrollArea_groupbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-            scrollArea_groupbox.setStyleSheet(scrollArea_style)
+            group_scrollBar_color = blendWithWhite(color=group["color"], amt=0.7) if group["color"] else "F0F0F0"
+            scrollArea_groupbox.setStyleSheet(scrollArea_style+group_scrollArea_styleSheet.format(group_color=group_scrollBar_color))
 
             scrollArea_groupbox_layout  = QtWidgets.QHBoxLayout(self.scrollArea_WidgetContents)
             scrollArea_groupbox_layout.setAlignment(Qt.AlignLeft)
@@ -111,7 +115,7 @@ class MainWindow(QtWidgets.QMainWindow):
             group_label_name = QtWidgets.QLabel(scrollArea_MAIN_groupbox)
             group_label_name.setText(group["display_name"] if group["display_name"] else group["name"])
             group_label_color = blendWithWhite(color=group["color"], amt=0.4) if group["color"] else "transparent"
-            group_label_name.setStyleSheet(group_label_name_styleSheet.format(color=group_label_color))
+            group_label_name.setStyleSheet(self.config_data["styles"]["general_groupLables_style"].format(group_color=group_label_color))
             scrollArea_MAIN_groupbox_layout.addWidget(group_label_name)
             for _, member in group["members"].items():
                 print(member)
@@ -252,7 +256,7 @@ def getGroupsAndMembersData(config_data):
     f.write(json.dumps(prepared_systems_data, indent=4))
     f.close()
 
-    return prepared_systems_data
+    return prepared_systems_data, config_data
 
 
 if __name__ == "__main__":
