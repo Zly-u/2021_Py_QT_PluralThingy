@@ -118,6 +118,7 @@ class MainWindow(QtWidgets.QMainWindow):
             colors_set[2] = _group_list[(i + 1) % _group_list_len][1]["color"]
 
             # TODO: Add more params in JSON for blendWithWhite or something
+
             group_scrollArea_color_prev = blendWithWhite(color=colors_set[0], amt=1) if colors_set[0] else "F0F0F0"
             group_scrollArea_color      = blendWithWhite(color=colors_set[1], amt=1) if colors_set[1] else "F0F0F0"
             group_scrollArea_color_next = blendWithWhite(color=colors_set[2], amt=1) if colors_set[2] else "F0F0F0"
