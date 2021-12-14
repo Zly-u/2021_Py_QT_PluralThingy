@@ -92,7 +92,13 @@ class MainWindow(QtWidgets.QMainWindow):
         scrollArea_MAIN_groupbox_layout = QtWidgets.QVBoxLayout(scrollArea_MAIN_WidgetContents)
         scrollArea_MAIN_groupbox_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addWidget(scrollArea_MAIN_groupbox)
-        for _, group in list(self.system_data["groups"].items())[::-1]:
+
+        colors_set = [None, None, None]
+        _group_list = list(self.system_data["groups"].items())[::-1]
+        _group_list_len = len(_group_list)
+        for i, _group in enumerate(_group_list):
+            group = _group[1]
+
             scrollArea_style = group["style_qss"]
             self.scrollArea_WidgetContents = QtWidgets.QWidget()
 
@@ -106,16 +112,50 @@ class MainWindow(QtWidgets.QMainWindow):
             scrollArea_groupbox.setFrameShadow(QtWidgets.QFrame.Sunken)
             scrollArea_groupbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             scrollArea_groupbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-            group_scrollBar_color = blendWithWhite(color=group["color"], amt=0.7) if group["color"] else "F0F0F0"
-            scrollArea_groupbox.setStyleSheet(scrollArea_style+group_scrollArea_styleSheet.format(group_color=group_scrollBar_color))
+
+            colors_set[0] = _group_list[(i - 1) % _group_list_len][1]["color"]
+            colors_set[1] = _group_list[i][1]["color"]
+            colors_set[2] = _group_list[(i + 1) % _group_list_len][1]["color"]
+
+            # TODO: Add more params in JSON for blendWithWhite or something
+            group_scrollArea_color_prev = blendWithWhite(color=colors_set[0], amt=1) if colors_set[0] else "F0F0F0"
+            group_scrollArea_color      = blendWithWhite(color=colors_set[1], amt=1) if colors_set[1] else "F0F0F0"
+            group_scrollArea_color_next = blendWithWhite(color=colors_set[2], amt=1) if colors_set[2] else "F0F0F0"
+
+            group_scrollBar_color_prev  = blendWithWhite(color=colors_set[0], amt=0.7) if colors_set[0] else "F0F0F0"
+            group_scrollBar_color       = blendWithWhite(color=colors_set[1], amt=0.7) if colors_set[1] else "F0F0F0"
+            group_scrollBar_color_next  = blendWithWhite(color=colors_set[2], amt=0.7) if colors_set[2] else "F0F0F0"
+
+            group_label_color_prev  = blendWithWhite(color=colors_set[0], amt=0.4) if colors_set[0] else "transparent"
+            group_label_color       = blendWithWhite(color=colors_set[1], amt=0.4) if colors_set[1] else "transparent"
+            group_label_color_next  = blendWithWhite(color=colors_set[2], amt=0.4) if colors_set[2] else "transparent"
+
+            scrollArea_groupbox.setStyleSheet(
+                scrollArea_style.format(
+                    prev_group_color    = group_scrollArea_color_prev,
+                    group_color         = group_scrollArea_color,
+                    next_group_color    = group_scrollArea_color_next
+                )
+                +
+                group_scrollArea_styleSheet.format(
+                    prev_group_color    = group_scrollBar_color_prev,
+                    group_color         = group_scrollBar_color,
+                    next_group_color    = group_scrollBar_color_next
+                )
+            )
 
             scrollArea_groupbox_layout  = QtWidgets.QHBoxLayout(self.scrollArea_WidgetContents)
             scrollArea_groupbox_layout.setAlignment(Qt.AlignLeft)
 
             group_label_name = QtWidgets.QLabel(scrollArea_MAIN_groupbox)
             group_label_name.setText(group["display_name"] if group["display_name"] else group["name"])
-            group_label_color = blendWithWhite(color=group["color"], amt=0.4) if group["color"] else "transparent"
-            group_label_name.setStyleSheet(self.config_data["styles"]["general_groupLables_style"].format(group_color=group_label_color))
+
+            group_label_name.setStyleSheet(self.config_data["styles"]["general_groupLables_style"].format(
+                prev_group_color    = group_label_color_prev,
+                group_color         = group_label_color,
+                next_group_color    = group_label_color_next
+            ))
+
             scrollArea_MAIN_groupbox_layout.addWidget(group_label_name)
             for _, member in group["members"].items():
                 print(member)
