@@ -1,8 +1,5 @@
-import ctypes
-import os
-import json
-import sys
-import pyperclip
+import ctypes, os, sys
+import json, pyperclip
 from urllib import request
 from pynput import keyboard
 
@@ -50,13 +47,59 @@ DEFAULT_JSON_DATA = {
     },
     "specified_group_ids": {
         "group_id": {
-            "style_qss": ""
+            "blend_groupLabel_to_white": 0,
+            "blend_group_to_white": 0,
+            "blend_scrollBar_to_white": 0,
+            "blend_members_to_white": 0,
+
+            #TODO: Styles in files for each element
+            "group_style_qss_file": "",
+            "group_scrollBar_file": "",
+            "member_style_file": "",
+            "member_avy_style_file": "",
+            "member_label_style_file": "",
+        },
+        "no_group": {
+            "blend_groupLabel_to_white": 0,
+            "blend_group_to_white": 0,
+            "blend_scrollBar_to_white": 0,
+            "blend_members_to_white": 0,
+
+            #TODO: Styles in files for each element
+            "group_style_qss_file": "",
+            "group_scrollBar_file": "",
+            "member_style_file": "",
+            "member_avy_style_file": "",
+            "member_label_style_file": "",
         },
     }
 }
 
+DEFAULT_GROUP_DATA = {
+    "id":           "",
+    "uuid":         "",
+    "name":         "",
+    "display_name": "",
+    "description":  "",
+    "icon":         None,
+    "banner":       None,
+    "color":        "",
+    "created":      "",
+    "privacy":      None,
+    # "members": {},
+}
 
-def lerp(a, b, x): return int(a*x+b*(1-x))
+#TODO: Customizable order of the groups
+
+#TODO: Make an ability to rename the "no_group" group from the config
+
+#TODO: Put Styles into the separate files to inherit from
+
+#TODO: Make Member Frames Customisable
+
+#TODO: Refactor the code so it's more manageable and easy to read.
+
+def lerp(a, b, x): return int(b*x+a*(1-x))
 def blendWithWhite(color, amt = 0.5):
     icol = int(color, 16)
     red = (icol & 0xFF0000) >> 16
@@ -94,10 +137,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_layout.addWidget(scrollArea_MAIN_groupbox)
 
         colors_set = [None, None, None]
-        _group_list = list(self.system_data["groups"].items())[::-1]
+        _group_list = list(self.system_data["groups"].items())
         _group_list_len = len(_group_list)
-        for i, _group in enumerate(_group_list):
-            group = _group[1]
+        for i, _group in enumerate(self.system_data["groups"].items()):
+            group_id    = _group[0]
+            group       = _group[1]
 
             scrollArea_style = group["style_qss"]
             self.scrollArea_WidgetContents = QtWidgets.QWidget()
@@ -117,19 +161,23 @@ class MainWindow(QtWidgets.QMainWindow):
             colors_set[1] = _group_list[i][1]["color"]
             colors_set[2] = _group_list[(i + 1) % _group_list_len][1]["color"]
 
-            # TODO: Add more params in JSON for blendWithWhite or something
+            cfg_isGroupDefined = group_id in self.config_data["specified_group_ids"]
+            groupLabel_blend    = self.config_data["specified_group_ids"][group_id]["blend_groupLabel_to_white"] if cfg_isGroupDefined else 0
+            group_blend         = self.config_data["specified_group_ids"][group_id]["blend_group_to_white"] if cfg_isGroupDefined else 0
+            scrollBar_blend     = self.config_data["specified_group_ids"][group_id]["blend_scrollBar_to_white"] if cfg_isGroupDefined else 0
+            member_blend        = self.config_data["specified_group_ids"][group_id]["blend_members_to_white"] if cfg_isGroupDefined else 0
 
-            group_scrollArea_color_prev = blendWithWhite(color=colors_set[0], amt=1) if colors_set[0] else "F0F0F0"
-            group_scrollArea_color      = blendWithWhite(color=colors_set[1], amt=1) if colors_set[1] else "F0F0F0"
-            group_scrollArea_color_next = blendWithWhite(color=colors_set[2], amt=1) if colors_set[2] else "F0F0F0"
+            group_scrollArea_color_prev = blendWithWhite(color=colors_set[0], amt=group_blend) if colors_set[0] else "F0F0F0"
+            group_scrollArea_color      = blendWithWhite(color=colors_set[1], amt=group_blend) if colors_set[1] else "F0F0F0"
+            group_scrollArea_color_next = blendWithWhite(color=colors_set[2], amt=group_blend) if colors_set[2] else "F0F0F0"
 
-            group_scrollBar_color_prev  = blendWithWhite(color=colors_set[0], amt=0.7) if colors_set[0] else "F0F0F0"
-            group_scrollBar_color       = blendWithWhite(color=colors_set[1], amt=0.7) if colors_set[1] else "F0F0F0"
-            group_scrollBar_color_next  = blendWithWhite(color=colors_set[2], amt=0.7) if colors_set[2] else "F0F0F0"
+            group_scrollBar_color       = blendWithWhite(color=colors_set[1], amt=scrollBar_blend) if colors_set[1] else "F0F0F0"
+            group_scrollBar_color_next  = blendWithWhite(color=colors_set[2], amt=scrollBar_blend) if colors_set[2] else "F0F0F0"
+            group_scrollBar_color_prev  = blendWithWhite(color=colors_set[0], amt=scrollBar_blend) if colors_set[0] else "F0F0F0"
 
-            group_label_color_prev  = blendWithWhite(color=colors_set[0], amt=0.4) if colors_set[0] else "transparent"
-            group_label_color       = blendWithWhite(color=colors_set[1], amt=0.4) if colors_set[1] else "transparent"
-            group_label_color_next  = blendWithWhite(color=colors_set[2], amt=0.4) if colors_set[2] else "transparent"
+            group_label_color_prev      = blendWithWhite(color=colors_set[0], amt=groupLabel_blend) if colors_set[0] else "transparent"
+            group_label_color           = blendWithWhite(color=colors_set[1], amt=groupLabel_blend) if colors_set[1] else "transparent"
+            group_label_color_next      = blendWithWhite(color=colors_set[2], amt=groupLabel_blend) if colors_set[2] else "transparent"
 
             scrollArea_groupbox.setStyleSheet(
                 scrollArea_style.format(
@@ -182,7 +230,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 frame_memberbox.setLineWidth(2)
                 frame_memberbox.setFrameShape(QtWidgets.QFrame.Panel)
                 frame_memberbox.setFrameShadow(QtWidgets.QFrame.Sunken)
-                frame_memberbox.setStyleSheet(member_StyleSheet.format(color=blendWithWhite(color=member["color"], amt=0.4)))
+                frame_memberbox.setStyleSheet(member_StyleSheet.format(color=blendWithWhite(color=member["color"] or "F0F0F0", amt=member_blend)))
 
                 frame_memberbox_layout = QtWidgets.QVBoxLayout(frame_memberbox)
 
@@ -195,7 +243,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         "name": member["name"]
                     }
                     self.members[member["name"]] = memberdict
-                    memberbutton.setText(member["name"])
+                    memberbutton.setText(member["display_name"] or member["name"])
                     memberbutton.setStyleSheet(QLabel_StyleSheet)
 
                     def disableButtons(*_, foo = member["name"]):
@@ -268,14 +316,25 @@ def getGroupsAndMembersData(config_data):
     config_system_id           = config_data["system_id"]
     config_specified_groups    = config_data["specified_group_ids"]
 
-    systems_data    = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}"))
-    systems_groups  = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups"))
+    systems_data        = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}"))
+    systems_groups = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups"))
+    systems_all_members = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/members"))
 
-    prepared_systems_data = systems_data
-    prepared_systems_data["groups"] = {}
-    for systems_group in systems_groups:
-        group_id = systems_group["id"]
-        prepared_group = systems_group
+    # Prepare the "no_group" group for members without a group and append it into the list of the groups
+    # For easy to maintain purpose later
+    prepared_no_group = DEFAULT_GROUP_DATA
+    prepared_no_group["id"] = "no_group"
+    systems_groups.append(prepared_no_group)
+
+
+    # prepared_systems_data = systems_data
+    systems_data["groups"] = {}
+    for i, systems_group in enumerate(systems_groups, 1):
+        # if no leftover members are left - don't include "no_group"
+        if len(systems_all_members) == 0: break
+
+        group_id        = systems_group["id"]
+        prepared_group  = systems_group
 
         # Preparing and appending data for conveniece idk.
         prepared_group["members"] = {}
@@ -285,19 +344,33 @@ def getGroupsAndMembersData(config_data):
         if group_id in config_specified_groups:
             prepared_group["style_qss"] = str(config_specified_groups[group_id]["style_qss"])
 
-        # Append members into the group's data
-        groups_members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{group_id}/members"))
-        for member in groups_members:
-            prepared_group["members"][member["id"]] = member
+        # Append members into the group's data if it's not "no_group"
+        if group_id != "no_group":
+            groups_members = json.load(request.urlopen(f"{PK_ENDPOINT}groups/{group_id}/members"))
+            for member in groups_members:
+                prepared_group["members"][member["id"]] = member
+
+            # Take out members that already in some group
+            # At the end of iterations the leftover members will be
+            # appended into the "no_group" group
+            for groups_member in groups_members:
+                for n, member in enumerate(systems_all_members):
+                    if groups_member == member:
+                        systems_all_members.pop(n) #what's popin?
+                        break
 
         # Append the prepared group in the main data
-        prepared_systems_data["groups"][group_id] = prepared_group
+        systems_data["groups"][group_id] = prepared_group
 
-    f = open("your_system.json", 'w+')
-    f.write(json.dumps(prepared_systems_data, indent=4))
-    f.close()
+        # Add the "no_group" members if exist (if they don't the loop interrupts anyway before this statement)
+        if i == len(systems_groups):
+            systems_data["groups"]["no_group"]["members"] = {member["id"]: member for member in systems_all_members}
 
-    return prepared_systems_data, config_data
+    # Just saves System's info, debugging purpose and just for owner's curiousity idk
+    with open("your_system.json", 'w+') as f:
+        f.write(json.dumps(systems_data, indent=4))
+
+    return systems_data, config_data
 
 
 if __name__ == "__main__":
@@ -310,6 +383,7 @@ if __name__ == "__main__":
     kb_controller = keyboard.Controller()
     sending = False
     def sendWithPrefix():
+        # Go the the very beginning of the line
         with kb_controller.pressed(keyboard.Key.ctrl):
             kb_controller.tap(keyboard.Key.home)
 
