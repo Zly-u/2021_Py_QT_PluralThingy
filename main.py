@@ -9,39 +9,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 
 
-#Members Styling
-member_StyleSheet = '''
-QFrame {{
-    border: 2px solid gray;
-    border-bottom-right-radius: 15px;
-    border-top-left-radius: 15px;
-    background: #{color};
-}}
-'''
-memberavy_StyleSheet = '''
-QLabel {
-    border-bottom-right-radius: 15px;
-    border-top-left-radius: 15px;
-}
-'''
-QLabel_StyleSheet = '''
-QRadioButton {
-    background-color: transparent;
-}
-'''
-
-#Groups Styles
-group_scrollArea_styleSheet = '''
-QScrollBar:horizontal {{
-    height: 13px;
-    background-color: #{group_color}
-}}
-'''
-
-
 PK_ENDPOINT = "https://api.pluralkit.me/v2/"
 
-DEFAULT_STYLES = {
+DEFAULT_STYLES_FIELDS = {
 
 }
 
@@ -52,28 +22,32 @@ DEFAULT_JSON_DATA = {
     },
     "specified_group_ids": {
         "group_id": {
-            "blend_groupLabel_to_white": 0,
-            "blend_group_to_white": 0,
-            "blend_scrollBar_to_white": 0,
-            "blend_members_to_white": 0,
+            "blend_groupLabel_to_white":    0,
+            "blend_group_to_white":         0,
+            "blend_scrollBar_to_white":     0,
+            "blend_members_to_white":       0,
 
-            "group_style_qss_file": "",
-            "group_scrollBar_file": "",
-            "member_style_file": "",
-            "member_avy_style_file": "",
-            "member_label_style_file": "",
+            "styles_qss": {
+                "group":                "",
+                "member_frame":         "",
+                "member_imageLabel":    "",
+                "member_radioButton":   ""
+            }
         },
         "no_group": {
+            "name": "non grouped",
+
             "blend_groupLabel_to_white": 0,
             "blend_group_to_white": 0,
             "blend_scrollBar_to_white": 0,
             "blend_members_to_white": 0,
 
-            "group_style_qss_file": "",
-            "group_scrollBar_file": "",
-            "member_style_file": "",
-            "member_avy_style_file": "",
-            "member_label_style_file": "",
+            "styles_qss": {
+                "group":                "",
+                "member_frame":         "",
+                "member_imageLabel":    "",
+                "member_radioButton":   ""
+            }
         },
     }
 }
@@ -92,16 +66,12 @@ DEFAULT_GROUP_DATA = {
     # "members": {},
 }
 
-#TODO: Make Member Frames Customisable
-
-#TODO: Customizable order of the groups
-
-#TODO: Make an ability to rename the "no_group" group from the config
-
 #TODO: Refactor the code so it's more manageable and easy to read.
 
-def lerp(a, b, x): return int(b*x+a*(1-x))
-def blendWithWhite(color, amt = 0.5):
+#TODO: Make Custom dialog for adding custom members/groups
+
+def lerp(a, b, x) -> int: return int(b*x+a*(1-x))
+def blendWithWhite(color, amt = 0.5) -> str:
     icol = int(color, 16)
     red = (icol & 0xFF0000) >> 16
     grn = (icol & 0x00FF00) >> 8
@@ -109,21 +79,32 @@ def blendWithWhite(color, amt = 0.5):
     return '{0:06x}'.format(lerp(red, 0xff, amt) << 16 | lerp(grn, 0xff, amt) << 8 | lerp(blu, 0xff, amt))
 
 
-class MainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
-        super(MainWindow, self).__init__()
+class testDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super(testDialog, self).__init__(parent=parent)
 
-        self.active_member = None
-        self.members = {}
+        self.resize(280, 200)
+        self.setWindowTitle("test")
+
+
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent=parent)
+
+        self.active_member  = None
+        self.members        = {}
 
         self.resize(620, 635)
         self.setMinimumSize(460, 635)
 
+        # Data
+        self.system_data, self.config_data = getGroupsAndMembersData(validateJSON())
+
+        # Preparing the main window
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
         self.main_layout = QtWidgets.QVBoxLayout(self.centralwidget)
 
-        self.system_data, self.config_data = getGroupsAndMembersData(validateJSON())
         self.setWindowTitle(self.system_data["name"])
 
         scrollArea_MAIN_WidgetContents = QtWidgets.QWidget()
@@ -136,21 +117,25 @@ class MainWindow(QtWidgets.QMainWindow):
         scrollArea_MAIN_groupbox_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addWidget(scrollArea_MAIN_groupbox)
 
-        colors_set = [None, None, None]
-        _group_list = list(self.system_data["groups"].items())
+        colors_set      = [None, None, None]
+        _group_list     = list(self.system_data["groups"].items())
         _group_list_len = len(_group_list)
         for i, _group in enumerate(self.system_data["groups"].items()):
             group_id    = _group[0]
             group       = _group[1]
 
-            scrollArea_style = loadStyle(group["style_qss"]) if group["style_qss"] else ""
+            print(group_id, group["name"])
+            group_config_data  = self.config_data["specified_group_ids"].get(group_id, {})
+
+            styles = group["styles_qss"]
+
             self.scrollArea_WidgetContents = QtWidgets.QWidget()
 
             scrollArea_groupbox = QtWidgets.QScrollArea(scrollArea_MAIN_groupbox)
             scrollArea_groupbox.setWidget(self.scrollArea_WidgetContents)
             scrollArea_groupbox.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-            scrollArea_groupbox.setFixedHeight(160)
             scrollArea_groupbox.setWidgetResizable(True)
+            scrollArea_groupbox.setFixedHeight(160)
             scrollArea_groupbox.setLineWidth(3)
             scrollArea_groupbox.setFrameShape(QtWidgets.QFrame.Panel)
             scrollArea_groupbox.setFrameShadow(QtWidgets.QFrame.Sunken)
@@ -161,35 +146,32 @@ class MainWindow(QtWidgets.QMainWindow):
             colors_set[1] = _group_list[i][1]["color"]
             colors_set[2] = _group_list[(i + 1) % _group_list_len][1]["color"]
 
-            cfg_isGroupDefined = group_id in self.config_data["specified_group_ids"]
-            groupLabel_blend    = self.config_data["specified_group_ids"][group_id]["blend_groupLabel_to_white"] if cfg_isGroupDefined else 0
-            group_blend         = self.config_data["specified_group_ids"][group_id]["blend_group_to_white"] if cfg_isGroupDefined else 0
-            scrollBar_blend     = self.config_data["specified_group_ids"][group_id]["blend_scrollBar_to_white"] if cfg_isGroupDefined else 0
-            member_blend        = self.config_data["specified_group_ids"][group_id]["blend_members_to_white"] if cfg_isGroupDefined else 0
+            groupLabel_blend    = group_config_data.get("blend_groupLabel_to_white",    0)
+            group_blend         = group_config_data.get("blend_group_to_white",         0)
+            scrollBar_blend     = group_config_data.get("blend_scrollBar_to_white",     0)
+            member_blend        = group_config_data.get("blend_members_to_white",       0)
 
-            group_scrollArea_color_prev = blendWithWhite(color=colors_set[0], amt=group_blend) if colors_set[0] else "F0F0F0"
-            group_scrollArea_color      = blendWithWhite(color=colors_set[1], amt=group_blend) if colors_set[1] else "F0F0F0"
-            group_scrollArea_color_next = blendWithWhite(color=colors_set[2], amt=group_blend) if colors_set[2] else "F0F0F0"
+            group_scrollArea_color_prev = blendWithWhite(color=colors_set[0], amt=group_blend)      if colors_set[0] else "F0F0F0"
+            group_scrollArea_color      = blendWithWhite(color=colors_set[1], amt=group_blend)      if colors_set[1] else "F0F0F0"
+            group_scrollArea_color_next = blendWithWhite(color=colors_set[2], amt=group_blend)      if colors_set[2] else "F0F0F0"
 
-            group_scrollBar_color       = blendWithWhite(color=colors_set[1], amt=scrollBar_blend) if colors_set[1] else "F0F0F0"
-            group_scrollBar_color_next  = blendWithWhite(color=colors_set[2], amt=scrollBar_blend) if colors_set[2] else "F0F0F0"
-            group_scrollBar_color_prev  = blendWithWhite(color=colors_set[0], amt=scrollBar_blend) if colors_set[0] else "F0F0F0"
+            group_scrollBar_color       = blendWithWhite(color=colors_set[1], amt=scrollBar_blend)  if colors_set[1] else "F0F0F0"
+            group_scrollBar_color_next  = blendWithWhite(color=colors_set[2], amt=scrollBar_blend)  if colors_set[2] else "F0F0F0"
+            group_scrollBar_color_prev  = blendWithWhite(color=colors_set[0], amt=scrollBar_blend)  if colors_set[0] else "F0F0F0"
 
             group_label_color_prev      = blendWithWhite(color=colors_set[0], amt=groupLabel_blend) if colors_set[0] else "transparent"
             group_label_color           = blendWithWhite(color=colors_set[1], amt=groupLabel_blend) if colors_set[1] else "transparent"
             group_label_color_next      = blendWithWhite(color=colors_set[2], amt=groupLabel_blend) if colors_set[2] else "transparent"
 
+            scrollArea_style = loadStyle(styles.get("group", ""))
             scrollArea_groupbox.setStyleSheet(
                 scrollArea_style.format(
-                    prev_group_color    = group_scrollArea_color_prev,
-                    group_color         = group_scrollArea_color,
-                    next_group_color    = group_scrollArea_color_next
-                )
-                +
-                group_scrollArea_styleSheet.format(
-                    prev_group_color    = group_scrollBar_color_prev,
-                    group_color         = group_scrollBar_color,
-                    next_group_color    = group_scrollBar_color_next
+                    prev_group_color            = group_scrollArea_color_prev,
+                    group_color                 = group_scrollArea_color,
+                    next_group_color            = group_scrollArea_color_next,
+                    scrollBar_prev_group_color  = group_scrollBar_color_prev,
+                    scrollBar_group_color       = group_scrollBar_color,
+                    scrollBar_next_group_color  = group_scrollBar_color_next
                 )
             )
 
@@ -197,7 +179,8 @@ class MainWindow(QtWidgets.QMainWindow):
             scrollArea_groupbox_layout.setAlignment(Qt.AlignLeft)
 
             group_label_name = QtWidgets.QLabel(scrollArea_MAIN_groupbox)
-            group_label_name.setText(group["display_name"] if group["display_name"] else group["name"])
+            group_label_text = group_config_data.get("name", group.get("display_name", group.get("name", "NO NAME")))
+            group_label_name.setText(group_label_text)
 
             group_label_name.setStyleSheet(loadStyle(self.config_data["styles"]["general_groupLables_style"]["style_css"]).format(
                 prev_group_color    = group_label_color_prev,
@@ -225,7 +208,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 frame_memberbox.setLineWidth(2)
                 frame_memberbox.setFrameShape(QtWidgets.QFrame.Panel)
                 frame_memberbox.setFrameShadow(QtWidgets.QFrame.Sunken)
-                frame_memberbox.setStyleSheet(member_StyleSheet.format(color=blendWithWhite(color=member["color"] or "F0F0F0", amt=member_blend)))
+
+                member_frame_style = loadStyle(styles.get("member_frame", ""))
+                frame_memberbox.setStyleSheet(member_frame_style.format(color=blendWithWhite(color=member["color"] or "F0F0F0", amt=member_blend)))
 
                 frame_memberbox_layout = QtWidgets.QVBoxLayout(frame_memberbox)
 
@@ -239,7 +224,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     }
                     self.members[member["name"]] = memberdict
                     memberbutton.setText(member["display_name"] or member["name"])
-                    memberbutton.setStyleSheet(QLabel_StyleSheet)
+
+                    member_radioButton_style = loadStyle(styles.get("member_radioButton", ""))
+                    memberbutton.setStyleSheet(member_radioButton_style)
 
                     def disableButtons(*_, foo = member["name"]):
                         meme = self.members[foo]
@@ -260,6 +247,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     memberimage.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
                     memberimage.setFixedSize(80, 80)
 
+                    member_imageLabel_style = loadStyle(styles.get("member_imageLabel", ""))
+                    memberimage.setStyleSheet(member_imageLabel_style)
+
                 frame_memberbox_layout.addWidget(memberimage)
                 frame_memberbox_layout.addWidget(memberbutton)
 
@@ -277,7 +267,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         button_none.clicked.connect(lambda *args: none_button())
 
+        button_dialogTest = QtWidgets.QPushButton(self.centralwidget)
+        button_dialogTest.setText("Dialog Test")
+        button_dialogTest.setFixedSize(100, 23)
+
+        def test_dialog():
+            dialog = testDialog(parent=self)
+            dialog.show()
+
+        button_dialogTest.clicked.connect(lambda *args: test_dialog())
+
         self.main_layout.addWidget(button_none)
+        self.main_layout.addWidget(button_dialogTest)
 
 
 # Pop Up window with message.
@@ -296,7 +297,7 @@ def validateJSON(config_name = r"config.json"):
 
     # Check the config itself.
     config_data_raw = open(config_name, 'r+')
-    config_data = json.load(config_data_raw)
+    config_data     = json.load(config_data_raw)
     config_data_raw.close()
     print(config_data)
 
@@ -307,6 +308,21 @@ def validateJSON(config_name = r"config.json"):
     print("Seems loik everything is fine with the config! ^w^")
 
     return config_data
+
+
+def orderGroups(systems_data, config_data) -> None:
+    config_specified_groups = config_data["specified_group_ids"]
+    systems_groups          = systems_data["groups"].copy()
+
+    organised_groups = {}
+    for group in config_specified_groups:
+        if group in systems_groups:
+            organised_groups[group] = systems_groups.pop(group)
+
+    for key, sg in systems_groups.items():
+        organised_groups[key] = sg
+
+    systems_data["groups"] = organised_groups
 
 
 def getGroupsAndMembersData(config_data):
@@ -338,9 +354,9 @@ def getGroupsAndMembersData(config_data):
         prepared_group["members"] = {}
 
         # If the group specified in the config - retreive the data
-        prepared_group["style_qss"] = ""
+        prepared_group["styles_qss"] = {}
         if group_id in config_specified_groups:
-            prepared_group["style_qss"] = str(config_specified_groups[group_id]["style_qss"])
+            prepared_group["styles_qss"] = config_specified_groups[group_id]["styles_qss"]
 
         # Append members into the group's data if it's not "no_group"
         if group_id != "no_group":
@@ -368,17 +384,20 @@ def getGroupsAndMembersData(config_data):
     with open("your_system.json", 'w+') as f:
         f.write(json.dumps(systems_data, indent=4))
 
+    orderGroups(systems_data, config_data)
+
     return systems_data, config_data
 
 
 def loadStyle(style_name):
     style_code = ""
+    if not style_name: return ""
 
     try:
         with open("styles/"+style_name, "r") as style:
             style_code = style.read()
     except FileNotFoundError:
-        errorMsg("The specified style file: "+style_name+" does not exist!", "Style Error!")
+        errorMsg("The specified style file: '"+str(style_name)+"' does not exist!", "Style Error!")
 
     return style_code
 
