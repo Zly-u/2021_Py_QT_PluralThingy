@@ -40,6 +40,11 @@ QScrollBar:horizontal {{
 
 
 PK_ENDPOINT = "https://api.pluralkit.me/v2/"
+
+DEFAULT_STYLES = {
+
+}
+
 DEFAULT_JSON_DATA = {
     "system_id": "",
     "styles": {
@@ -52,7 +57,6 @@ DEFAULT_JSON_DATA = {
             "blend_scrollBar_to_white": 0,
             "blend_members_to_white": 0,
 
-            #TODO: Styles in files for each element
             "group_style_qss_file": "",
             "group_scrollBar_file": "",
             "member_style_file": "",
@@ -65,7 +69,6 @@ DEFAULT_JSON_DATA = {
             "blend_scrollBar_to_white": 0,
             "blend_members_to_white": 0,
 
-            #TODO: Styles in files for each element
             "group_style_qss_file": "",
             "group_scrollBar_file": "",
             "member_style_file": "",
@@ -89,13 +92,11 @@ DEFAULT_GROUP_DATA = {
     # "members": {},
 }
 
+#TODO: Make Member Frames Customisable
+
 #TODO: Customizable order of the groups
 
 #TODO: Make an ability to rename the "no_group" group from the config
-
-#TODO: Put Styles into the separate files to inherit from
-
-#TODO: Make Member Frames Customisable
 
 #TODO: Refactor the code so it's more manageable and easy to read.
 
@@ -110,11 +111,10 @@ def blendWithWhite(color, amt = 0.5):
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
-        self.active_member = None
-        self.members = {}
-
         super(MainWindow, self).__init__()
 
+        self.active_member = None
+        self.members = {}
 
         self.resize(620, 635)
         self.setMinimumSize(460, 635)
@@ -143,7 +143,7 @@ class MainWindow(QtWidgets.QMainWindow):
             group_id    = _group[0]
             group       = _group[1]
 
-            scrollArea_style = group["style_qss"]
+            scrollArea_style = loadStyle(group["style_qss"]) if group["style_qss"] else ""
             self.scrollArea_WidgetContents = QtWidgets.QWidget()
 
             scrollArea_groupbox = QtWidgets.QScrollArea(scrollArea_MAIN_groupbox)
@@ -199,7 +199,7 @@ class MainWindow(QtWidgets.QMainWindow):
             group_label_name = QtWidgets.QLabel(scrollArea_MAIN_groupbox)
             group_label_name.setText(group["display_name"] if group["display_name"] else group["name"])
 
-            group_label_name.setStyleSheet(self.config_data["styles"]["general_groupLables_style"].format(
+            group_label_name.setStyleSheet(loadStyle(self.config_data["styles"]["general_groupLables_style"]["style_css"]).format(
                 prev_group_color    = group_label_color_prev,
                 group_color         = group_label_color,
                 next_group_color    = group_label_color_next
@@ -208,11 +208,6 @@ class MainWindow(QtWidgets.QMainWindow):
             scrollArea_MAIN_groupbox_layout.addWidget(group_label_name)
             for _, member in group["members"].items():
                 print(member)
-
-                try:
-                    os.mkdir("avatars")
-                except FileExistsError:
-                    pass
 
                 member_avy_url  = member["avatar_url"]
                 member_avy_path = ""
@@ -285,12 +280,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_layout.addWidget(button_none)
 
 
+# Pop Up window with message.
 def errorMsg(message, title, _exit=True):
     ctypes.windll.user32.MessageBoxW(0, message, title, 0)
     if _exit: sys.exit()
 
 
-def validateJSON(config_name = "config.json"):
+def validateJSON(config_name = r"config.json"):
     # Check if config exists
     if not os.path.exists(config_name):
         f = open(config_name, 'w+')
@@ -301,6 +297,7 @@ def validateJSON(config_name = "config.json"):
     # Check the config itself.
     config_data_raw = open(config_name, 'r+')
     config_data = json.load(config_data_raw)
+    config_data_raw.close()
     print(config_data)
 
     # Check the fields in the config
@@ -316,13 +313,14 @@ def getGroupsAndMembersData(config_data):
     config_system_id           = config_data["system_id"]
     config_specified_groups    = config_data["specified_group_ids"]
 
+    # Gather system's data
     systems_data        = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}"))
-    systems_groups = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups"))
+    systems_groups      = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups"))
     systems_all_members = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/members"))
 
     # Prepare the "no_group" group for members without a group and append it into the list of the groups
     # For easy to maintain purpose later
-    prepared_no_group = DEFAULT_GROUP_DATA
+    prepared_no_group       = DEFAULT_GROUP_DATA
     prepared_no_group["id"] = "no_group"
     systems_groups.append(prepared_no_group)
 
@@ -373,7 +371,33 @@ def getGroupsAndMembersData(config_data):
     return systems_data, config_data
 
 
+def loadStyle(style_name):
+    style_code = ""
+
+    try:
+        with open("styles/"+style_name, "r") as style:
+            style_code = style.read()
+    except FileNotFoundError:
+        errorMsg("The specified style file: "+style_name+" does not exist!", "Style Error!")
+
+    return style_code
+
+
+def makeDir(name):
+    try:
+        os.mkdir(name)
+    except FileExistsError:
+        pass
+
+
+def prepareFolders():
+    makeDir("avatars")
+    makeDir("styles")
+
+
 if __name__ == "__main__":
+    prepareFolders()
+
     # WINDOW HANDLING
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
