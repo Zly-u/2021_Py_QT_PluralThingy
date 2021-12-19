@@ -9,15 +9,18 @@ output/
 temp/
 test/
 
-# Build process
+# Build cache
 dist/
 build/
-*.spec
 __pycache__/
+*.spec
 *.pyo
 *.pyc
 *.pyd
 
-#misc
+# Misc
 avatars/
+styles/
 .idea/
+*.css
+*.json
