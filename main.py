@@ -1,19 +1,15 @@
 import ctypes, os, sys
 import json, pyperclip
 from urllib import request
+
 from pynput import keyboard
 
 # PyQt5 stuff
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
-
+from PyQt5.QtGui import QPixmap, QIcon
 
 PK_ENDPOINT = "https://api.pluralkit.me/v2/"
-
-DEFAULT_STYLES_FIELDS = {
-
-}
 
 DEFAULT_JSON_DATA = {
     "system_id": "",
@@ -37,10 +33,10 @@ DEFAULT_JSON_DATA = {
         "no_group": {
             "name": "non grouped",
 
-            "blend_groupLabel_to_white": 0,
-            "blend_group_to_white": 0,
-            "blend_scrollBar_to_white": 0,
-            "blend_members_to_white": 0,
+            "blend_groupLabel_to_white":    0,
+            "blend_group_to_white":         0,
+            "blend_scrollBar_to_white":     0,
+            "blend_members_to_white":       0,
 
             "styles_qss": {
                 "group":                "",
@@ -87,12 +83,14 @@ class testDialog(QtWidgets.QDialog):
         self.setWindowTitle("test")
 
 
+WINDOW_NAME = "Plural Helper"
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent=parent)
 
         self.active_member  = None
         self.members        = {}
+        self.actuallyClose  = False
 
         self.resize(620, 635)
         self.setMinimumSize(460, 635)
@@ -100,12 +98,29 @@ class MainWindow(QtWidgets.QMainWindow):
         # Data
         self.system_data, self.config_data = getGroupsAndMembersData(validateJSON())
 
+        # Preparing the Tray
+        self.tray = QtWidgets.QSystemTrayIcon(self)
+        self.tray.setIcon(QIcon("avatars/Lilla.png"))
+        self.tray.setToolTip(WINDOW_NAME)
+        self.tray_menu  = QtWidgets.QMenu(self)
+        tray_menu_view  = QtWidgets.QAction("Show window", self)
+        tray_menu_view.triggered.connect(lambda *args: self.show())
+        tray_menu_close = QtWidgets.QAction("Close", self)
+        tray_menu_close.triggered.connect(lambda *args: self.closeThing())
+        self.tray_menu.addAction(tray_menu_view)
+        self.tray_menu.addAction(tray_menu_close)
+        self.tray.setContextMenu(self.tray_menu)
+        self.tray.activated.connect(self.iconActivated)
+        self.tray.show()
+        t_icon = QtWidgets.QSystemTrayIcon.MessageIcon(QtWidgets.QSystemTrayIcon.Information)
+        self.tray.showMessage(WINDOW_NAME, "The program will run in the background if you close it!", t_icon, 5)
+
         # Preparing the main window
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
         self.main_layout = QtWidgets.QVBoxLayout(self.centralwidget)
 
-        self.setWindowTitle(self.system_data["name"])
+        self.setWindowTitle(WINDOW_NAME + ": " + self.system_data["name"])
 
         scrollArea_MAIN_WidgetContents = QtWidgets.QWidget()
         scrollArea_MAIN_groupbox = QtWidgets.QScrollArea(self.centralwidget)
@@ -279,6 +294,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.main_layout.addWidget(button_none)
         self.main_layout.addWidget(button_dialogTest)
+
+
+    def closeThing(self):
+        self.actuallyClose = True
+        self.close()
+
+
+    def closeEvent(self, event):
+        if not self.actuallyClose: event.ignore()
+        self.hide()
+
+
+    def iconActivated(self, reason: QtWidgets.QSystemTrayIcon.ActivationReason):
+        if reason == QtWidgets.QSystemTrayIcon.Trigger:
+            self.show()
 
 
 # Pop Up window with message.
