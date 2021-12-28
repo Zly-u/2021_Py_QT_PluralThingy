@@ -347,7 +347,7 @@ def errorMsg(message, title, _exit=True) -> None:
     if _exit: sys.exit()
 
 
-def validateJSON(config_name = r"config.json"):
+def validateJSON(config_name = r"config.json") -> dict:
     """
     :param config_name: name for the config to create/check.
     :return: config_data: dict
