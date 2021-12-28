@@ -62,9 +62,19 @@ DEFAULT_GROUP_DATA = {
     # "members": {},
 }
 
+#Main TODOs or something:
+#TODO: General styles should go somewhere else but in `config.json`
+
 #TODO: Refactor the code so it's more manageable and easy to read.
 
-#TODO: Make Custom dialog for adding custom members/groups
+#TODO: Make a Custom dialog for adding custom members/groups
+
+#TODO: Make a Custom dialog for managing config aka: settings.
+
+#TODO: Make an ability to refresh the groups
+
+#TODO: Make documentation for styles
+#TODO: Make documentation for config
 
 def lerp(a, b, x) -> int: return int(b*x+a*(1-x))
 def blendWithWhite(color, amt = 0.5) -> str:
@@ -88,19 +98,17 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent=parent)
 
+        # Class fields.
         self.active_member  = None
         self.members        = {}
         self.actuallyClose  = False
-
-        self.resize(620, 635)
-        self.setMinimumSize(460, 635)
 
         # Data
         self.system_data, self.config_data = getGroupsAndMembersData(validateJSON())
 
         # Preparing the Tray
         self.tray = QtWidgets.QSystemTrayIcon(self)
-        self.tray.setIcon(QIcon("avatars/Lilla.png"))
+        self.tray.setIcon(QIcon("avatars/Lilla.png")) #TODO: Without a god damn icon it doesn't work, need to find a way to bypass it.
         self.tray.setToolTip(WINDOW_NAME)
         self.tray_menu  = QtWidgets.QMenu(self)
         tray_menu_view  = QtWidgets.QAction("Show window", self)
@@ -116,6 +124,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tray.showMessage(WINDOW_NAME, "The program will run in the background if you close it!", t_icon, 5)
 
         # Preparing the main window
+        self.resize(620, 635)
+        self.setMinimumSize(460, 635)
+
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
         self.main_layout = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -132,10 +143,13 @@ class MainWindow(QtWidgets.QMainWindow):
         scrollArea_MAIN_groupbox_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addWidget(scrollArea_MAIN_groupbox)
 
+        # `colors_set` is for styling purposes, [0] - prev group cloro, [1] - current, [2] - next group color
+        # So people for example could do group color transitions between each other, idk.
+        # TODO: Prob need to turn it into some Datatype with a Class, just for the refactoring purposes?
         colors_set      = [None, None, None]
         _group_list     = list(self.system_data["groups"].items())
         _group_list_len = len(_group_list)
-        for i, _group in enumerate(self.system_data["groups"].items()):
+        for i, _group in enumerate(_group_list):
             group_id    = _group[0]
             group       = _group[1]
 
@@ -157,10 +171,12 @@ class MainWindow(QtWidgets.QMainWindow):
             scrollArea_groupbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             scrollArea_groupbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
+            # A way to pick prev and next groups, loops around if the index goes OOB
             colors_set[0] = _group_list[(i - 1) % _group_list_len][1]["color"]
             colors_set[1] = _group_list[i][1]["color"]
             colors_set[2] = _group_list[(i + 1) % _group_list_len][1]["color"]
 
+            # Get Style's params.
             groupLabel_blend    = group_config_data.get("blend_groupLabel_to_white",    0)
             group_blend         = group_config_data.get("blend_group_to_white",         0)
             scrollBar_blend     = group_config_data.get("blend_scrollBar_to_white",     0)
@@ -178,6 +194,7 @@ class MainWindow(QtWidgets.QMainWindow):
             group_label_color           = blendWithWhite(color=colors_set[1], amt=groupLabel_blend) if colors_set[1] else "transparent"
             group_label_color_next      = blendWithWhite(color=colors_set[2], amt=groupLabel_blend) if colors_set[2] else "transparent"
 
+            # Load a `group` style and apply it.
             scrollArea_style = loadStyle(styles.get("group", ""))
             scrollArea_groupbox.setStyleSheet(
                 scrollArea_style.format(
@@ -207,6 +224,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for _, member in group["members"].items():
                 print(member)
 
+                # Download avatars and put them into `avatars` folder.
                 member_avy_url  = member["avatar_url"]
                 member_avy_path = ""
                 if member_avy_url:
@@ -224,6 +242,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 frame_memberbox.setFrameShape(QtWidgets.QFrame.Panel)
                 frame_memberbox.setFrameShadow(QtWidgets.QFrame.Sunken)
 
+                # Load a `member_frame` style and apply it.
                 member_frame_style = loadStyle(styles.get("member_frame", ""))
                 frame_memberbox.setStyleSheet(member_frame_style.format(color=blendWithWhite(color=member["color"] or "F0F0F0", amt=member_blend)))
 
@@ -240,11 +259,14 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.members[member["name"]] = memberdict
                     memberbutton.setText(member["display_name"] or member["name"])
 
+                    # Load a `member_radioButton` style and apply it.
                     member_radioButton_style = loadStyle(styles.get("member_radioButton", ""))
                     memberbutton.setStyleSheet(member_radioButton_style)
 
+                    # Workaround for unchecking prev radio buttons when you click on another.
+                    # Actually has to be defined in here or else it won't work, it's very stupid tbh.
                     def disableButtons(*_, foo = member["name"]):
-                        meme = self.members[foo]
+                        meme = self.members[foo] # "Haha Amy very funni" - (c) Amy in her head.
                         if self.active_member:
                             self.active_member["button"].setChecked(False)
                         self.active_member = meme
@@ -262,6 +284,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     memberimage.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
                     memberimage.setFixedSize(80, 80)
 
+                    # Load a `member_imageLabel` style and apply it.
                     member_imageLabel_style = loadStyle(styles.get("member_imageLabel", ""))
                     memberimage.setStyleSheet(member_imageLabel_style)
 
@@ -286,6 +309,7 @@ class MainWindow(QtWidgets.QMainWindow):
         button_dialogTest.setText("Dialog Test")
         button_dialogTest.setFixedSize(100, 23)
 
+        # The TODO boy
         def test_dialog():
             dialog = testDialog(parent=self)
             dialog.show()
@@ -312,13 +336,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 # Pop Up window with message.
-def errorMsg(message, title, _exit=True):
+def errorMsg(message, title, _exit=True) -> None:
+    """
+    :param message: Message to display.
+    :param title: Title.
+    :param _exit: If the exit from the program is required on the call.
+    :return: None
+    """
     ctypes.windll.user32.MessageBoxW(0, message, title, 0)
     if _exit: sys.exit()
 
 
 def validateJSON(config_name = r"config.json"):
-    # Check if config exists
+    """
+    :param config_name: name for the config to create/check.
+    :return: config_data: dict
+    """
+    # Check if config exists, if not - create it with default params.
     if not os.path.exists(config_name):
         f = open(config_name, 'w+')
         f.write(json.dumps(DEFAULT_JSON_DATA, indent=4))
@@ -335,12 +369,23 @@ def validateJSON(config_name = r"config.json"):
     if config_data["system_id"] == "":
         errorMsg("The System ID is not specifyed", f"Error in {config_name}")
 
-    print("Seems loik everything is fine with the config! ^w^")
+    print("Seems loik everything is fine with the confeeg! ^w^")
 
     return config_data
 
 
 def orderGroups(systems_data, config_data) -> None:
+    """
+    :param systems_data:
+    :param config_data:
+    :return: None
+
+    Gets the unsorted dict of groups from the System and
+    sorts it with the specified order from the `congig.json`.
+
+    First it figures our which groups are specified and sorts them out,
+    and then it puts the unsorted leftovers at the end of the list.
+    """
     config_specified_groups = config_data["specified_group_ids"]
     systems_groups          = systems_data["groups"].copy()
 
@@ -355,7 +400,11 @@ def orderGroups(systems_data, config_data) -> None:
     systems_data["groups"] = organised_groups
 
 
-def getGroupsAndMembersData(config_data):
+def getGroupsAndMembersData(config_data: dict) -> tuple[dict, dict]:
+    """
+    :param config_data: dict of config_data
+    :return: systems_data: dict, config_data: dict
+    """
     config_system_id           = config_data["system_id"]
     config_specified_groups    = config_data["specified_group_ids"]
 
@@ -419,7 +468,13 @@ def getGroupsAndMembersData(config_data):
     return systems_data, config_data
 
 
-def loadStyle(style_name):
+def loadStyle(style_name) -> str:
+    """
+    :param style_name:
+    :return: str: Style Code(QSS) String
+
+    A safe way to get a style and return if none was specified.
+    """
     style_code = ""
     if not style_name: return ""
 
@@ -432,14 +487,23 @@ def loadStyle(style_name):
     return style_code
 
 
-def makeDir(name):
+def makeDir(name) -> None:
+    """
+    :param name:
+    :return: None
+
+    A safe way to make a directory.
+    """
     try:
         os.mkdir(name)
     except FileExistsError:
         pass
 
 
-def prepareFolders():
+def prepareFolders() -> None:
+    """
+    :return: None
+    """
     makeDir("avatars")
     makeDir("styles")
 

@@ -1,0 +1,4 @@
+QLabel {{
+    font-size: 12pt;
+    background-color: qlineargradient( x1:0 y1:0, x2:1 y2:0, stop:0 #{group_color}, stop:1 transparent);
+}}

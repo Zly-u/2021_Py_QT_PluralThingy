@@ -1,0 +1,12 @@
+QScrollArea QWidget {{
+    background-color: #FF00FF;
+}}
+
+QAbstractScrollArea {{
+    background-color: #FF00FF;
+}}
+
+QScrollBar:horizontal {{
+    height: 13px;
+    background-color: #FF00FF;
+}}

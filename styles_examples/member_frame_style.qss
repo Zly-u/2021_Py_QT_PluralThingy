@@ -1,0 +1,6 @@
+QFrame {{
+    border: 2px solid gray;
+    border-bottom-right-radius: 15px;
+    border-top-left-radius: 15px;
+    background: #{color};
+}}
