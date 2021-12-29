@@ -15,7 +15,12 @@ PK_ENDPOINT = "https://api.pluralkit.me/v2/"
 DEFAULT_JSON_DATA = {
     "system_id": "",
     "styles": {
-        "general_groupLables_style": "",
+        "general_groupLables_style": {
+            "style_css": ""
+        },
+        "general_members_style": {
+            "style_css": ""
+        }
     },
     "specified_group_ids": {
         "group_id": {
