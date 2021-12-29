@@ -118,7 +118,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Preparing the Tray
         self.tray = QtWidgets.QSystemTrayIcon(self)
-        self.tray.setIcon(QIcon("avatars/Lilla.png")) #TODO: Without a god damn icon it doesn't work, need to find a way to bypass it.
+        self.tray.setIcon(QIcon("res/plurpyicon.png"))
         self.tray.setToolTip(WINDOW_NAME)
         self.tray_menu  = QtWidgets.QMenu(self)
         tray_menu_view  = QtWidgets.QAction("Show window", self)
@@ -310,6 +310,8 @@ class MainWindow(QtWidgets.QMainWindow):
         button_none.setFixedSize(100, 23)
 
         def none_button():
+            if not self.active_member: return
+
             self.active_member["button"].setChecked(False)
             self.active_member = None
 
