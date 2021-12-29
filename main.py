@@ -1,6 +1,7 @@
 import ctypes, os, sys
 import json, pyperclip
 from urllib import request
+import ssl
 
 from pynput import keyboard
 
@@ -61,6 +62,10 @@ DEFAULT_GROUP_DATA = {
     "privacy":      None,
     # "members": {},
 }
+
+DEFAULT_CTX = ssl.create_default_context()
+DEFAULT_CTX.check_hostname = False
+DEFAULT_CTX.verify_mode = ssl.CERT_NONE
 
 #Main TODOs or something:
 #TODO: General styles should go somewhere else but in `config.json`
@@ -231,7 +236,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     member_avy_ext  = member_avy_url.split(".")[-1]
                     member_avy_path = f"avatars/{member['name']}.{member_avy_ext}"
                     member_avy_req  = request.Request(member_avy_url, headers={"User-Agent": "Python3.10"})
-                    member_avy_img  = request.urlopen(member_avy_req)
+                    member_avy_img  = request.urlopen(member_avy_req, context=DEFAULT_CTX)
                     with open(member_avy_path, "wb") as memberavyfile:
                         memberavyfile.write(member_avy_img.read())
 
@@ -409,9 +414,9 @@ def getGroupsAndMembersData(config_data: dict) -> tuple[dict, dict]:
     config_specified_groups    = config_data["specified_group_ids"]
 
     # Gather system's data
-    systems_data        = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}"))
-    systems_groups      = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups"))
-    systems_all_members = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/members"))
+    systems_data        = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}",         context=DEFAULT_CTX))
+    systems_groups      = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/groups",  context=DEFAULT_CTX))
+    systems_all_members = json.load(request.urlopen(f"{PK_ENDPOINT}systems/{config_system_id}/members", context=DEFAULT_CTX))
 
     # Prepare the "no_group" group for members without a group and append it into the list of the groups
     # For easy to maintain purpose later
